@@ -429,4 +429,326 @@ function toggleStreet() {
   if (state.streetMode) {
     // Arriving home — flush street time into buffer (street drains colchón)
     if (state.activeId === 'street' && state.activeStart) {
-      const elapsed = (Date.now
+      const elapsed = (Date.now() - state.activeStart) / 1000 / 60;
+      state.used['buffer'] = (state.used['buffer'] || 0) + elapsed;
+      state.streetUsedMins = (state.streetUsedMins || 0) + elapsed;
+      state.activeId = null; state.activeStart = null;
+    }
+    state.streetMode  = false;
+    state.bufferStart = Date.now(); // resume normal buffer drain
+    saveState();
+    clearInterval(timerInt);
+    document.getElementById('session-banner').classList.remove('visible');
+    document.getElementById('session-banner').classList.remove('street-session');
+    updateStreetUI();
+    showToast('🏠 Bienvenido de vuelta — tiempo registrado en Colchón');
+    renderLive();
+  } else {
+    // Leaving — pause buffer drain, start street event
+    flushBuffer(); // commit buffer so far
+    if (state.activeId && state.activeId !== 'street') flushActive(); // stop any running cat
+    state.activeId    = 'street';
+    state.activeStart = Date.now();
+    state.streetMode  = true;
+    state.bufferStart = null; // pause normal buffer drain while on street
+    saveState();
+    updateStreetUI();
+    showToast('🚶 Modo calle activado — el tiempo irá al Colchón');
+    startBannerTick('street');
+    renderLive();
+  }
+}
+
+function updateStreetUI() {
+  const fab  = document.getElementById('street-fab');
+  const icon = document.getElementById('street-fab-icon');
+  const lbl  = document.getElementById('street-fab-label');
+  const info = document.getElementById('street-info');
+  const banner = document.getElementById('session-banner');
+  if (state.streetMode) {
+    fab.classList.add('active-street');
+    icon.textContent = '🏠';
+    lbl.textContent  = 'Ya llegué';
+    info.style.display = 'block';
+    banner.classList.add('street-session');
+    document.getElementById('sb-name').textContent = '🚶 Calle / Traslados';
+    banner.classList.add('visible');
+  } else {
+    fab.classList.remove('active-street');
+    icon.textContent = '🚶';
+    lbl.textContent  = 'Saliendo a la calle';
+    info.style.display = 'none';
+    banner.classList.remove('street-session');
+    banner.classList.remove('visible');
+  }
+}
+
+// ── TIMER ──────────────────────────────────────────────────────
+function flushBuffer() {
+  if(state.bufferStart) {
+    state.used['buffer'] = (state.used['buffer']||0) + (Date.now()-state.bufferStart)/1000/60;
+    state.bufferStart = null;
+  }
+}
+function flushActive() {
+  if(state.activeId && state.activeStart && state.activeId !== 'street') {
+    state.used[state.activeId] = (state.used[state.activeId]||0) + (Date.now()-state.activeStart)/1000/60;
+    state.activeId = null; state.activeStart = null;
+  } else if (state.activeId === 'street') {
+    // street time goes to buffer
+    const elapsed = (Date.now() - state.activeStart) / 1000 / 60;
+    state.used['buffer'] = (state.used['buffer']||0) + elapsed;
+    state.streetUsedMins = (state.streetUsedMins||0) + elapsed;
+    state.activeId = null; state.activeStart = null;
+  }
+}
+
+function startTimer(id) {
+  if (state.streetMode) { showToast('⚠ Estás en modo calle — toca 🏠 Ya llegué primero'); return; }
+  if (state.activeId === id) { stopTimer(); return; }
+  if (state.activeId) flushActive();
+  flushBuffer();
+  state.activeId = id; state.activeStart = Date.now();
+  saveState();
+  const cat = CATS.find(c => c.id === id);
+  const banner = document.getElementById('session-banner');
+  document.getElementById('sb-name').textContent = `${cat.emoji} ${cat.name}`;
+  banner.classList.remove('street-session');
+  banner.classList.add('visible');
+  startBannerTick(id);
+  renderLive();
+}
+
+function startBannerTick(id) {
+  clearInterval(timerInt);
+  const start = state.activeStart;
+  timerInt = setInterval(()=>{
+    const el = Math.floor((Date.now()-start)/1000);
+    document.getElementById('sb-elapsed').textContent = fmtHMS(el);
+    if(id==='street') {
+      document.getElementById('si-elapsed').textContent = fmtHMS(el);
+    }
+  },1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInt);
+  flushActive();
+  state.bufferStart = Date.now();
+  saveState();
+  document.getElementById('session-banner').classList.remove('visible');
+  document.getElementById('session-banner').classList.remove('street-session');
+  renderLive();
+}
+
+function resetWeek() {
+  if(!confirm('¿Empezar nueva semana? Se borrará todo el progreso.')) return;
+  clearInterval(timerInt);
+  document.getElementById('session-banner').classList.remove('visible');
+  state = freshState();
+  saveState(); updateStreetUI(); renderLive();
+  showToast('✓ Nueva semana iniciada');
+}
+
+function exportData() {
+  const snap = getSnap();
+  let csv='Categoría,Diario,Semanal (h),Usado (h),% Semanal\n';
+  CATS.forEach(c=>{
+    const usedH=(snap[c.id]/60).toFixed(2);
+    const pct=(snap[c.id]/(c.weekH*60)*100).toFixed(1);
+    const daily=c.dailyH<1?`${c.dailyH*60}min`:`${c.dailyH}h`;
+    csv+=`${c.name},${daily},${c.weekH},${usedH},${pct}%\n`;
+  });
+  // Add street as informational row
+  const streetH = ((state.streetUsedMins||0)/60).toFixed(2);
+  csv+=`Calle/Traslados (info),esporádico,—,${streetH},—\n`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`bolson_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+let tick=0;
+function onTick(){
+  tick++;
+  updateClock();
+  if(tick%3===0) renderLive();
+  if(tick%60===0 && state.bufferStart){
+    state.used['buffer']=(state.used['buffer']||0)+(Date.now()-state.bufferStart)/1000/60;
+    state.bufferStart=Date.now(); saveState();
+  }
+}
+
+function renderLive(){
+  const snap = getSnap();
+  const now  = new Date();
+
+  // ── TODAY SUMMARY ──
+  const totalUsed = Object.values(snap).reduce((a,b)=>a+b,0);
+  document.getElementById('ts-used').textContent = (totalUsed/60).toFixed(1)+'h';
+  const bufLeft = Math.max(0, CATS.find(c=>c.id==='buffer').weekH*60 - snap['buffer']);
+  const bufEl = document.getElementById('ts-free');
+  bufEl.textContent = fmtHM(bufLeft);
+  bufEl.className = 'ts-val '+(bufLeft<30?'red':bufLeft<90?'orange':'orange');
+  // Street: live time if active, else saved total
+  const streetLive = (state.streetMode && state.activeStart)
+    ? (state.streetUsedMins||0) + (Date.now()-state.activeStart)/1000/60
+    : (state.streetUsedMins||0);
+  document.getElementById('ts-street').textContent = streetLive > 0 ? fmtHM(streetLive) : '—';
+  const alerts = CATS.filter(c=>snap[c.id]>c.weekH*60).length;
+  document.getElementById('ts-alerts').textContent = alerts;
+
+  // Street info panel
+  if (state.streetMode && state.activeStart) {
+    const streetElapsed = (Date.now()-state.activeStart)/1000;
+    document.getElementById('si-elapsed').textContent = fmtHMS(Math.floor(streetElapsed));
+  }
+  document.getElementById('si-left').textContent = fmtHM(bufLeft); // colchón restante
+
+  // ── CAT CARDS ──
+  const list = document.getElementById('cat-list');
+  list.innerHTML='';
+  const dayOfWeek = now.getDay()===0?7:now.getDay();
+  const daysElapsed = Math.max(1, dayOfWeek-1+(now.getHours()/24));
+
+  CATS.forEach(cat=>{
+    const usedWeek = snap[cat.id];
+    const budgetWeek = cat.weekH*60;
+    const avgPerDay  = usedWeek/daysElapsed;
+    const pctDay     = Math.min(100,(avgPerDay/(cat.dailyH*60))*100);
+    const pctWeek    = Math.min(100,(usedWeek/budgetWeek)*100);
+    const over       = usedWeek>budgetWeek;
+    const low        = !over&&pctWeek>80;
+    const isActive   = state.activeId===cat.id;
+    const leftWeek   = budgetWeek-usedWeek;
+    const leftStr    = over?`⚠ +${fmtHM(usedWeek-budgetWeek)}`:fmtHM(leftWeek);
+    const leftCls    = over?'cc-left gone':low?'cc-left low':'cc-left';
+
+    const card=document.createElement('div');
+    card.className='cat-card'+(isActive?' active-card':'')+(over?' exhausted':'');
+    card.style.setProperty('--cc',cat.color);
+
+    const btnLabel = isActive ? '⏸ PAUSAR' : '▶ INICIAR';
+    const btnCls   = 'cc-btn'+(isActive?' active-btn':'');
+    const btnDisabled = state.activeId&&!isActive ? 'disabled' : '';
+    const streetWarning = state.streetMode ? 'disabled' : '';
+
+    card.innerHTML=`
+      <div class="cc-top">
+        <span class="cc-emoji">${cat.emoji}</span>
+        <span class="cc-name">${cat.name}</span>
+        <div class="cc-meta">
+          <div><strong>${cat.dailyH<1?cat.dailyH*60+'m':cat.dailyH+'h'}</strong>/día</div>
+          <div><strong>${cat.weekH}h</strong>/sem</div>
+        </div>
+      </div>
+      <div class="cc-bars">
+        <div class="cc-bar-wrap">
+          <div class="cc-bar-label">Prom. diario</div>
+          <div class="cc-track"><div class="cc-fill${over?' over':''}" style="width:${pctDay}%;background:${cat.color}"></div></div>
+        </div>
+        <div class="cc-bar-wrap">
+          <div class="cc-bar-label">Semana</div>
+          <div class="cc-track"><div class="cc-fill${over?' over':''}" style="width:${pctWeek}%;background:${cat.color}"></div></div>
+        </div>
+      </div>
+      <div class="cc-nums">
+        <span class="cc-used">${fmtHM(usedWeek)} usados</span>
+        <span class="${leftCls}">${leftStr}</span>
+      </div>
+      <button class="${btnCls}" onclick="startTimer('${cat.id}')" ${btnDisabled || streetWarning}>
+        ${btnLabel}
+      </button>`;
+    list.appendChild(card);
+  });
+
+  // ── WEEK VIEW ──
+  const ws=new Date(state.weekStart);
+  const we=new Date(ws); we.setDate(ws.getDate()+6);
+  const fmt=d=>`${d.getDate()}/${d.getMonth()+1}`;
+  document.getElementById('wp-week').textContent=`${fmt(ws)}–${fmt(we)}`;
+  document.getElementById('wp-used').textContent=(Object.values(snap).reduce((a,b)=>a+b,0)/60).toFixed(1)+'h';
+  document.getElementById('wp-buffer').textContent=Math.max(0,CATS.find(c=>c.id==='buffer').weekH-snap['buffer']/60).toFixed(1)+'h';
+
+  const wbars=document.getElementById('week-bars');
+  wbars.innerHTML='';
+  // Show street as informational row at top if ever used this week
+  if ((state.streetUsedMins||0) > 0 || state.streetMode) {
+    const streetH = streetLive/60;
+    const row=document.createElement('div');
+    row.className='wb-row';
+    row.innerHTML=`
+      <div class="wb-top">
+        <span class="wb-emoji">🚶</span>
+        <span class="wb-name" style="color:var(--street)">Calle / Traslados</span>
+        <span class="wb-pct" style="color:var(--dim)">esporádico</span>
+        <span class="wb-val" style="color:var(--street)">${streetH.toFixed(1)}h esta sem.</span>
+      </div>
+      <div class="wb-track"><div class="wb-fill" style="width:100%;background:rgba(255,204,0,.15)">
+        <div style="height:100%;width:${Math.min(100,streetH/2*100)}%;background:var(--street);border-radius:4px;transition:width .4s"></div>
+      </div></div>`;
+    wbars.appendChild(row);
+  }
+  CATS.forEach(cat=>{
+    const usedH=snap[cat.id]/60;
+    const pct=Math.min(100,(usedH/cat.weekH)*100);
+    const over=usedH>cat.weekH;
+    const row=document.createElement('div');
+    row.className='wb-row';
+    row.innerHTML=`
+      <div class="wb-top">
+        <span class="wb-emoji">${cat.emoji}</span>
+        <span class="wb-name">${cat.name}</span>
+        <span class="wb-pct">${pct.toFixed(0)}%</span>
+        <span class="wb-val" style="color:${over?'var(--red)':cat.color}">${usedH.toFixed(1)}/${cat.weekH}h</span>
+      </div>
+      <div class="wb-track"><div class="wb-fill${over?' over':''}" style="width:${pct}%;background:${cat.color}"></div></div>`;
+    wbars.appendChild(row);
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+// On load: pull from cloud first, then start app
+(async () => {
+  // Try to get latest state from cloud
+  const cloudState = await syncPull();
+  if (cloudState) {
+    // Use cloud state if it's newer or local is empty
+    const localUpdated = state.weekStart || 0;
+    const cloudUpdated = cloudState.weekStart || 0;
+    if (cloudUpdated >= localUpdated) {
+      state = cloudState;
+      // Ensure bufferStart is live (not a stale timestamp)
+      if (!state.bufferStart && !state.activeId && !state.streetMode) {
+        state.bufferStart = Date.now();
+      }
+      localStorage.setItem('bolson_v4', JSON.stringify(state));
+      showToast('☁️ Datos sincronizados');
+    }
+  }
+
+  if(!state.bufferStart&&!state.activeId&&!state.streetMode){state.bufferStart=Date.now();saveState();}
+
+  // Restore UI after page reload
+  if(state.streetMode && state.activeStart) {
+    updateStreetUI();
+    startBannerTick('street');
+  } else if(state.activeId && state.activeStart){
+    const cat=CATS.find(c=>c.id===state.activeId);
+    if(cat){
+      const banner=document.getElementById('session-banner');
+      document.getElementById('sb-name').textContent=`${cat.emoji} ${cat.name}`;
+      banner.classList.add('visible');
+      startBannerTick(state.activeId);
+    }
+  }
+  if(state.streetMode) updateStreetUI();
+
+  updateClock();
+  renderLive();
+  setInterval(onTick,1000);
+})();
+</script>
+</body>
+</html>
