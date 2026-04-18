@@ -323,7 +323,7 @@ const SUPA_KEY = 'sb_publishable_DoOoKxIyrJjZN4vj9GJmig_8f-T81BU'; // ← pegá 
 const DEVICE_ID = 'bolson-main'; // mismo ID en todos tus dispositivos = mismos datos
 
 async function syncPush(stateToSave) {
-  if (SUPA_KEY === 'sb_publishable_DoOoKxIyrJjZN4vj9GJmig_8f-T81BU') return; // sin clave no sincroniza
+  if (!SUPA_KEY) return; // sin clave no sincroniza
   try {
     await fetch(`${SUPA_URL}/rest/v1/bolson_sync`, {
       method: 'POST',
@@ -339,7 +339,7 @@ async function syncPush(stateToSave) {
 }
 
 async function syncPull() {
-  if (SUPA_KEY === 'sb_publishable_DoOoKxIyrJjZN4vj9GJmig_8f-T81BU') return null;
+  if (!SUPA_KEY) return null;
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/bolson_sync?id=eq.${DEVICE_ID}&select=data,updated_at`, {
       headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
@@ -429,4 +429,4 @@ function toggleStreet() {
   if (state.streetMode) {
     // Arriving home — flush street time into buffer (street drains colchón)
     if (state.activeId === 'street' && state.activeStart) {
-      const elapsed = (Dat
+      const elapsed = (Date.now
