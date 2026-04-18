@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Bolsón de Tiempo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080808;--s1:#111;--s2:#181818;--border:#222;
+  --lime:#c8f135;--orange:#f5a623;--cyan:#33d9f0;--pink:#f035c8;--red:#f03535;--street:#ffcc00;
+  --text:#ececec;--dim:#555;--dim2:#2a2a2a;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;-webkit-font-smoothing:antialiased;}
+body{padding:0 0 110px;}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(8,8,8,0.94);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;padding:10px 16px;gap:8px;
+}
+.tb-date{font-size:0.58rem;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;line-height:1.5;}
+.tb-date strong{color:var(--orange);font-weight:500;display:block;}
+.tb-clock{
+  font-family:'Cabinet Grotesk',sans-serif;font-weight:900;
+  font-size:clamp(1.7rem,5.5vw,2.6rem);color:var(--lime);
+  letter-spacing:-1px;font-variant-numeric:tabular-nums;text-align:center;line-height:1;
+}
+.tc-colon{animation:blink 1s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.12}}
+.tc-sec{font-size:.5em;color:rgba(200,241,53,.3);vertical-align:super;margin-left:2px;}
+.tb-cd{font-size:0.56rem;color:var(--dim);letter-spacing:.8px;text-align:right;line-height:1.6;}
+.tb-cd span{color:var(--cyan);font-weight:700;display:block;font-size:.68rem;}
+.tb-cd.warn span{color:var(--red);}
+
+/* ── TABS ── */
+.tabs{
+  display:flex;border-bottom:1px solid var(--border);
+  position:sticky;top:61px;z-index:99;background:var(--bg);
+}
+.tab{
+  flex:1;padding:11px 4px;font-family:'Cabinet Grotesk',sans-serif;
+  font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  text-align:center;color:var(--dim);border:none;background:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.tab.active{color:var(--lime);border-bottom-color:var(--lime);}
+
+/* ── STREET MODE BUTTON ── */
+.street-fab{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;
+  background:var(--street);color:#000;border:none;border-radius:50px;
+  padding:14px 28px;font-family:'Cabinet Grotesk',sans-serif;font-weight:900;
+  font-size:.9rem;letter-spacing:.5px;cursor:pointer;
+  box-shadow:0 4px 24px rgba(255,204,0,.35);
+  display:flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .2s;
+  white-space:nowrap;
+}
+.street-fab:active{transform:translateX(-50%) scale(.96);}
+.street-fab.active-street{
+  background:#000;color:var(--street);border:2px solid var(--street);
+  box-shadow:0 4px 24px rgba(255,204,0,.2);
+  animation:street-pulse 2s ease-in-out infinite;
+}
+@keyframes street-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,204,0,.4)}50%{box-shadow:0 0 0 10px rgba(255,204,0,0)}}
+
+/* ── SESSION BANNER ── */
+.session-banner{
+  margin:12px 14px 0;
+  background:var(--s1);border:1.5px solid var(--lime);border-radius:var(--r);
+  padding:12px 16px;display:none;align-items:center;gap:12px;
+  animation:glow 2s ease-in-out infinite;
+}
+.session-banner.visible{display:flex;}
+.session-banner.street-session{border-color:var(--street);}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(200,241,53,.2)}50%{box-shadow:0 0 0 6px rgba(200,241,53,0)}}
+.sb-dot{width:9px;height:9px;border-radius:50%;background:var(--lime);animation:blink 1s step-end infinite;flex-shrink:0;}
+.street-session .sb-dot{background:var(--street);}
+.sb-info{flex:1;min-width:0;}
+.sb-name{font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-elapsed{font-size:1.15rem;font-weight:700;color:var(--lime);font-variant-numeric:tabular-nums;letter-spacing:2px;}
+.street-session .sb-elapsed{color:var(--street);}
+.sb-stop{background:var(--red);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.sb-stop:active{transform:scale(.96);}
+
+/* ── PANELS ── */
+.panel{display:none;padding:14px;}
+.panel.active{display:block;}
+
+/* ── TODAY SUMMARY PILLS ── */
+.today-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
+.ts-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:13px 12px;text-align:center;}
+.ts-label{font-size:.54rem;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;}
+.ts-val{font-family:'Cabinet Grotesk',sans-serif;font-weight:900;font-size:1.4rem;font-variant-numeric:tabular-nums;line-height:1;}
+.ts-val.lime{color:var(--lime);}
+.ts-val.orange{color:var(--orange);}
+.ts-val.red{color:var(--red);}
+.ts-val.cyan{color:var(--cyan);}
+.ts-val.street{color:var(--street);}
+
+/* ── STREET INFO CARD ── */
+.street-info{
+  background:linear-gradient(135deg,#1a1600,#0d0d00);
+  border:1px solid rgba(255,204,0,.25);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:16px;
+}
+.si-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.si-title{font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:.85rem;color:var(--street);}
+.si-tip{font-size:.62rem;color:#887a00;line-height:1.6;}
+.si-tip strong{color:var(--street);}
+.si-stats{display:flex;gap:16px;margin-top:10px;}
+.si-stat{flex:1;text-align:center;}
+.si-stat-label{font-size:.52rem;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;}
+.si-stat-val{font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:1.1rem;color:var(--street);}
+
+/* ── CAT CARDS ── */
+.section-title{font-size:.58rem;color:var(--dim);letter-spacing:2.5px;text-transform:uppercase;margin:0 0 10px 2px;}
+.cat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.cat-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 14px 12px;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .12s;
+}
+.cat-card::after{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--cc,var(--lime));}
+.cat-card.active-card{border-color:var(--cc,var(--lime));transform:translateX(3px);}
+.cat-card.street-card::after{background:var(--street);}
+.cat-card.street-card.active-card{border-color:var(--street);}
+.cat-card.exhausted::after{background:var(--red);}
+.cat-card.exhausted{border-color:#2a1010;}
+.cc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cc-emoji{font-size:1.2rem;flex-shrink:0;}
+.cc-name{font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:.88rem;flex:1;}
+.cc-meta{text-align:right;font-size:.56rem;color:var(--dim);line-height:1.6;}
+.cc-meta strong{color:var(--text);font-weight:500;}
+.cc-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;}
+.cc-bar-wrap{display:flex;flex-direction:column;gap:3px;}
+.cc-bar-label{font-size:.52rem;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;}
+.cc-track{background:var(--dim2);border-radius:3px;height:5px;overflow:hidden;}
+.cc-fill{height:100%;border-radius:3px;transition:width .4s;}
+.cc-fill.over{background:var(--red)!important;}
+.cc-nums{display:flex;justify-content:space-between;font-size:.58rem;margin-bottom:10px;}
+.cc-used{color:var(--text);font-weight:700;}
+.cc-left{color:var(--dim);}
+.cc-left.low{color:var(--orange);}
+.cc-left.gone{color:var(--red);}
+.cc-btn{
+  width:100%;padding:9px;background:transparent;
+  border:1px solid var(--cc,var(--lime));color:var(--cc,var(--lime));
+  border-radius:8px;font-family:'DM Mono',monospace;font-size:.68rem;
+  letter-spacing:1px;cursor:pointer;transition:background .18s,color .18s;
+}
+.cc-btn.street-btn{border-color:var(--street);color:var(--street);}
+.cc-btn:hover:not(:disabled){background:var(--cc,var(--lime));color:#000;}
+.cc-btn.street-btn:hover:not(:disabled){background:var(--street);color:#000;}
+.cc-btn:disabled{opacity:.2;cursor:not-allowed;}
+.cc-btn.active-btn{background:rgba(200,241,53,.08);}
+.cc-btn.street-active-btn{background:rgba(255,204,0,.1);border-color:var(--street);color:var(--street);}
+
+/* ── WEEK VIEW ── */
+.week-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+.wp{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;}
+.wp-label{font-size:.5rem;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.wp-val{font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums;}
+
+.week-bars{display:flex;flex-direction:column;gap:11px;margin-bottom:20px;}
+.wb-row{display:flex;flex-direction:column;gap:4px;}
+.wb-top{display:flex;align-items:center;gap:8px;font-size:.68rem;}
+.wb-emoji{font-size:.95rem;flex-shrink:0;}
+.wb-name{flex:1;color:var(--text);}
+.wb-pct{color:var(--dim);font-size:.57rem;}
+.wb-val{font-weight:700;font-variant-numeric:tabular-nums;}
+.wb-track{background:var(--dim2);border-radius:4px;height:6px;overflow:hidden;}
+.wb-fill{height:100%;border-radius:4px;transition:width .5s;}
+.wb-fill.over{background:var(--red)!important;}
+
+/* ── ACTIONS ── */
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+.act-btn{padding:9px 16px;border-radius:8px;font-family:'DM Mono',monospace;font-size:.63rem;letter-spacing:1px;cursor:pointer;border:1px solid var(--border);background:var(--s1);color:var(--dim);transition:all .2s;}
+.act-btn:hover{border-color:var(--text);color:var(--text);}
+.act-btn.red-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--s2);border:1px solid var(--border);border-radius:20px;
+  padding:9px 20px;font-size:.68rem;opacity:0;pointer-events:none;z-index:999;
+  transition:opacity .3s,transform .3s;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(min-width:600px){
+  .topbar{padding:12px 24px;}
+  .tabs{padding:0 4px;}
+  .panel{padding:20px 24px;}
+  .session-banner{margin:16px 22px 0;}
+  .cat-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .today-summary{grid-template-columns:repeat(4,1fr);}
+}
+@media(min-width:900px){body{max-width:860px;margin:0 auto;}}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-date" id="tb-date">—</div>
+  <div class="tb-clock" id="tb-clock">00<span class="tc-colon">:</span>00<span class="tc-sec">00</span></div>
+  <div class="tb-right">
+    <div class="tb-cd" id="tb-cd">—</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('today')">Hoy</button>
+  <button class="tab" onclick="switchTab('week')">Semana</button>
+</div>
+
+<!-- ACTIVE SESSION BANNER -->
+<div class="session-banner" id="session-banner">
+  <div class="sb-dot"></div>
+  <div class="sb-info">
+    <div class="sb-name" id="sb-name">—</div>
+    <div class="sb-elapsed" id="sb-elapsed">00:00:00</div>
+  </div>
+  <button class="sb-stop" onclick="stopTimer()">■ DETENER</button>
+</div>
+
+<!-- TODAY PANEL -->
+<div class="panel active" id="panel-today">
+  <div class="today-summary">
+    <div class="ts-card">
+      <div class="ts-label">Hoy usado</div>
+      <div class="ts-val lime" id="ts-used">0h</div>
+    </div>
+    <div class="ts-card">
+      <div class="ts-label">Colchón hoy</div>
+      <div class="ts-val orange" id="ts-free">—</div>
+    </div>
+    <div class="ts-card">
+      <div class="ts-label">En calle</div>
+      <div class="ts-val street" id="ts-street">0h</div>
+    </div>
+    <div class="ts-card">
+      <div class="ts-label">Alertas</div>
+      <div class="ts-val red" id="ts-alerts">0</div>
+    </div>
+  </div>
+
+  <!-- STREET INFO -->
+  <div class="street-info" id="street-info" style="display:none">
+    <div class="si-header">
+      <span style="font-size:1.4rem">🚶</span>
+      <span class="si-title">MODO CALLE ACTIVO</span>
+    </div>
+    <div class="si-stats">
+      <div class="si-stat"><div class="si-stat-label">Tiempo fuera</div><div class="si-stat-val" id="si-elapsed">—</div></div>
+      <div class="si-stat"><div class="si-stat-label">Presupuesto día</div><div class="si-stat-val">1h</div></div>
+      <div class="si-stat"><div class="si-stat-label">Restante sem.</div><div class="si-stat-val" id="si-left">—</div></div>
+    </div>
+    <div class="si-tip" style="margin-top:10px">
+      💡 Cuando llegues, toca <strong>🏠 Ya llegué</strong> para detener el contador de calle.
+    </div>
+  </div>
+
+  <p class="section-title">Bolsas de tiempo · Toca para iniciar</p>
+  <div class="cat-list" id="cat-list"></div>
+
+  <div class="actions">
+    <button class="act-btn" onclick="exportData()">⬇ Exportar CSV</button>
+    <button class="act-btn red-btn" onclick="resetWeek()">↺ Nueva semana</button>
+  </div>
+</div>
+
+<!-- WEEK PANEL -->
+<div class="panel" id="panel-week">
+  <div class="week-pills">
+    <div class="wp"><div class="wp-label">Semana</div><div class="wp-val" id="wp-week">—</div></div>
+    <div class="wp"><div class="wp-label">Usado</div><div class="wp-val lime" id="wp-used">0h</div></div>
+    <div class="wp"><div class="wp-label">Colchón</div><div class="wp-val cyan" id="wp-buffer">—</div></div>
+  </div>
+  <p class="section-title">Progreso semanal por bolsa</p>
+  <div class="week-bars" id="week-bars"></div>
+</div>
+
+<!-- STREET FAB -->
+<button class="street-fab" id="street-fab" onclick="toggleStreet()">
+  <span id="street-fab-icon">🚶</span>
+  <span id="street-fab-label">Saliendo a la calle</span>
+</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CATEGORIES ─────────────────────────────────────────────────
+// Sueño 35 + Estudio 84 + Comida 21 + Limpieza 7 + Higiene 5.25
+// + Lectura 3.5 + PNL 3.5 + Colchón 8.75 = 168h ✓
+// Calle es un EVENTO PUNTUAL (sin bolsa fija). El tiempo de calle
+// se descuenta del Colchón automáticamente cuando está activo.
+const CATS = [
+  {id:'sleep',   emoji:'😴', name:'Sueño',           dailyH:5,     weekH:35,    color:'#7c6af1'},
+  {id:'study',   emoji:'📚', name:'Estudio',          dailyH:12,    weekH:84,    color:'#c8f135'},
+  {id:'food',    emoji:'🍽', name:'Comida',           dailyH:3,     weekH:21,    color:'#f5a623'},
+  {id:'clean',   emoji:'🧹', name:'Limpieza',         dailyH:1,     weekH:7,     color:'#f17c35'},
+  {id:'hygiene', emoji:'🚿', name:'Higiene Personal', dailyH:0.75,  weekH:5.25,  color:'#33d9f0'},
+  {id:'reading', emoji:'📖', name:'Lectura',          dailyH:0.5,   weekH:3.5,   color:'#43f1a4'},
+  {id:'pnl',     emoji:'🧠', name:'PNL',              dailyH:0.5,   weekH:3.5,   color:'#f035c8'},
+  {id:'buffer',  emoji:'🛡', name:'Colchón Libre',    dailyH:1.25,  weekH:8.75,  color:'#888'},
+];
+
+const DAYS_ES   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// ── STATE ─────────────────────────────────────────────────────
+function freshState() {
+  const used = {}; CATS.forEach(c => used[c.id] = 0);
+  // streetUsed = minutes spent on street this week (informational, drains from buffer)
+  return {used, weekStart:getWeekStart(), activeId:null, activeStart:null, bufferStart:Date.now(), streetMode:false, streetUsedMins:0};
+}
+function loadState() {
+  try { const s = localStorage.getItem('bolson_v4'); if(s) return JSON.parse(s); } catch(e){}
+  return freshState();
+}
+function saveState() { try{localStorage.setItem('bolson_v4', JSON.stringify(state));}catch(e){} }
+function getWeekStart() {
+  const d = new Date(); const day = d.getDay();
+  d.setDate(d.getDate()-day+(day===0?-6:1)); d.setHours(0,0,0,0); return d.toISOString();
+}
+
+let state    = loadState();
+let timerInt = null;
+let currentTab = 'today';
+
+// ── HELPERS ───────────────────────────────────────────────────
+const pad = v => String(v).padStart(2,'0');
+function fmtHM(mins) {
+  const h=Math.floor(Math.abs(mins)/60), m=Math.round(Math.abs(mins)%60);
+  if(h===0) return `${m}m`; if(m===0) return `${h}h`; return `${h}h ${m}m`;
+}
+function fmtHMS(s){ return `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`; }
+
+function getSnap() {
+  const snap = {};
+  CATS.forEach(c => snap[c.id] = state.used[c.id]||0);
+  // Add live buffer drain
+  if (state.bufferStart) snap['buffer'] += (Date.now()-state.bufferStart)/1000/60;
+  // Add live active category
+  if (state.activeId && state.activeStart)
+    snap[state.activeId] = (snap[state.activeId]||0) + (Date.now()-state.activeStart)/1000/60;
+  return snap;
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── TAB ───────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['today','week'][i]===tab));
+  document.getElementById('panel-today').classList.toggle('active', tab==='today');
+  document.getElementById('panel-week').classList.toggle('active', tab==='week');
+  renderLive();
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('tb-clock').innerHTML =
+    `${pad(now.getHours())}<span class="tc-colon">:</span>${pad(now.getMinutes())}<span class="tc-sec">${pad(now.getSeconds())}</span>`;
+  document.getElementById('tb-date').innerHTML =
+    `${DAYS_ES[now.getDay()]}<strong>${now.getDate()} ${MONTHS_ES[now.getMonth()]}</strong>`;
+  // Countdown to Sunday
+  const end = new Date(now);
+  const dts = (7-now.getDay())%7;
+  end.setDate(now.getDate()+dts); end.setHours(23,59,59,999);
+  const total = Math.max(0,Math.floor((end-now)/1000));
+  const dd=Math.floor(total/86400),hh=Math.floor((total%86400)/3600),mm=Math.floor((total%3600)/60),ss=total%60;
+  const urgent = dd===0&&hh<3;
+  const cdEl = document.getElementById('tb-cd');
+  cdEl.className='tb-cd'+(urgent?' warn':'');
+  cdEl.innerHTML = `fin semana<span>${dd>0?dd+'d ':''} ${pad(hh)}:${pad(mm)}:${pad(ss)}</span>`;
+}
+
+// ── STREET MODE ────────────────────────────────────────────────
+function toggleStreet() {
+  if (state.streetMode) {
+    // Arriving home — flush street time into buffer (street drains colchón)
+    if (state.activeId === 'street' && state.activeStart) {
+      const elapsed = (Date.now() - state.activeStart) / 1000 / 60;
+      state.used['buffer'] = (state.used['buffer'] || 0) + elapsed;
+      state.streetUsedMins = (state.streetUsedMins || 0) + elapsed;
+      state.activeId = null; state.activeStart = null;
+    }
+    state.streetMode  = false;
+    state.bufferStart = Date.now(); // resume normal buffer drain
+    saveState();
+    clearInterval(timerInt);
+    document.getElementById('session-banner').classList.remove('visible');
+    document.getElementById('session-banner').classList.remove('street-session');
+    updateStreetUI();
+    showToast('🏠 Bienvenido de vuelta — tiempo registrado en Colchón');
+    renderLive();
+  } else {
+    // Leaving — pause buffer drain, start street event
+    flushBuffer(); // commit buffer so far
+    if (state.activeId && state.activeId !== 'street') flushActive(); // stop any running cat
+    state.activeId    = 'street';
+    state.activeStart = Date.now();
+    state.streetMode  = true;
+    state.bufferStart = null; // pause normal buffer drain while on street
+    saveState();
+    updateStreetUI();
+    showToast('🚶 Modo calle activado — el tiempo irá al Colchón');
+    startBannerTick('street');
+    renderLive();
+  }
+}
+
+function updateStreetUI() {
+  const fab  = document.getElementById('street-fab');
+  const icon = document.getElementById('street-fab-icon');
+  const lbl  = document.getElementById('street-fab-label');
+  const info = document.getElementById('street-info');
+  const banner = document.getElementById('session-banner');
+  if (state.streetMode) {
+    fab.classList.add('active-street');
+    icon.textContent = '🏠';
+    lbl.textContent  = 'Ya llegué';
+    info.style.display = 'block';
+    banner.classList.add('street-session');
+    document.getElementById('sb-name').textContent = '🚶 Calle / Traslados';
+    banner.classList.add('visible');
+  } else {
+    fab.classList.remove('active-street');
+    icon.textContent = '🚶';
+    lbl.textContent  = 'Saliendo a la calle';
+    info.style.display = 'none';
+    banner.classList.remove('street-session');
+    banner.classList.remove('visible');
+  }
+}
+
+// ── TIMER ──────────────────────────────────────────────────────
+function flushBuffer() {
+  if(state.bufferStart) {
+    state.used['buffer'] = (state.used['buffer']||0) + (Date.now()-state.bufferStart)/1000/60;
+    state.bufferStart = null;
+  }
+}
+function flushActive() {
+  if(state.activeId && state.activeStart && state.activeId !== 'street') {
+    state.used[state.activeId] = (state.used[state.activeId]||0) + (Date.now()-state.activeStart)/1000/60;
+    state.activeId = null; state.activeStart = null;
+  } else if (state.activeId === 'street') {
+    // street time goes to buffer
+    const elapsed = (Date.now() - state.activeStart) / 1000 / 60;
+    state.used['buffer'] = (state.used['buffer']||0) + elapsed;
+    state.streetUsedMins = (state.streetUsedMins||0) + elapsed;
+    state.activeId = null; state.activeStart = null;
+  }
+}
+
+function startTimer(id) {
+  if (state.streetMode) { showToast('⚠ Estás en modo calle — toca 🏠 Ya llegué primero'); return; }
+  if (state.activeId === id) { stopTimer(); return; }
+  if (state.activeId) flushActive();
+  flushBuffer();
+  state.activeId = id; state.activeStart = Date.now();
+  saveState();
+  const cat = CATS.find(c => c.id === id);
+  const banner = document.getElementById('session-banner');
+  document.getElementById('sb-name').textContent = `${cat.emoji} ${cat.name}`;
+  banner.classList.remove('street-session');
+  banner.classList.add('visible');
+  startBannerTick(id);
+  renderLive();
+}
+
+function startBannerTick(id) {
+  clearInterval(timerInt);
+  const start = state.activeStart;
+  timerInt = setInterval(()=>{
+    const el = Math.floor((Date.now()-start)/1000);
+    document.getElementById('sb-elapsed').textContent = fmtHMS(el);
+    if(id==='street') {
+      document.getElementById('si-elapsed').textContent = fmtHMS(el);
+    }
+  },1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInt);
+  flushActive();
+  state.bufferStart = Date.now();
+  saveState();
+  document.getElementById('session-banner').classList.remove('visible');
+  document.getElementById('session-banner').classList.remove('street-session');
+  renderLive();
+}
+
+function resetWeek() {
+  if(!confirm('¿Empezar nueva semana? Se borrará todo el progreso.')) return;
+  clearInterval(timerInt);
+  document.getElementById('session-banner').classList.remove('visible');
+  state = freshState();
+  saveState(); updateStreetUI(); renderLive();
+  showToast('✓ Nueva semana iniciada');
+}
+
+function exportData() {
+  const snap = getSnap();
+  let csv='Categoría,Diario,Semanal (h),Usado (h),% Semanal\n';
+  CATS.forEach(c=>{
+    const usedH=(snap[c.id]/60).toFixed(2);
+    const pct=(snap[c.id]/(c.weekH*60)*100).toFixed(1);
+    const daily=c.dailyH<1?`${c.dailyH*60}min`:`${c.dailyH}h`;
+    csv+=`${c.name},${daily},${c.weekH},${usedH},${pct}%\n`;
+  });
+  // Add street as informational row
+  const streetH = ((state.streetUsedMins||0)/60).toFixed(2);
+  csv+=`Calle/Traslados (info),esporádico,—,${streetH},—\n`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`bolson_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+let tick=0;
+function onTick(){
+  tick++;
+  updateClock();
+  if(tick%3===0) renderLive();
+  if(tick%60===0 && state.bufferStart){
+    state.used['buffer']=(state.used['buffer']||0)+(Date.now()-state.bufferStart)/1000/60;
+    state.bufferStart=Date.now(); saveState();
+  }
+}
+
+function renderLive(){
+  const snap = getSnap();
+  const now  = new Date();
+
+  // ── TODAY SUMMARY ──
+  const totalUsed = Object.values(snap).reduce((a,b)=>a+b,0);
+  document.getElementById('ts-used').textContent = (totalUsed/60).toFixed(1)+'h';
+  const bufLeft = Math.max(0, CATS.find(c=>c.id==='buffer').weekH*60 - snap['buffer']);
+  const bufEl = document.getElementById('ts-free');
+  bufEl.textContent = fmtHM(bufLeft);
+  bufEl.className = 'ts-val '+(bufLeft<30?'red':bufLeft<90?'orange':'orange');
+  // Street: live time if active, else saved total
+  const streetLive = (state.streetMode && state.activeStart)
+    ? (state.streetUsedMins||0) + (Date.now()-state.activeStart)/1000/60
+    : (state.streetUsedMins||0);
+  document.getElementById('ts-street').textContent = streetLive > 0 ? fmtHM(streetLive) : '—';
+  const alerts = CATS.filter(c=>snap[c.id]>c.weekH*60).length;
+  document.getElementById('ts-alerts').textContent = alerts;
+
+  // Street info panel
+  if (state.streetMode && state.activeStart) {
+    const streetElapsed = (Date.now()-state.activeStart)/1000;
+    document.getElementById('si-elapsed').textContent = fmtHMS(Math.floor(streetElapsed));
+  }
+  document.getElementById('si-left').textContent = fmtHM(bufLeft); // colchón restante
+
+  // ── CAT CARDS ──
+  const list = document.getElementById('cat-list');
+  list.innerHTML='';
+  const dayOfWeek = now.getDay()===0?7:now.getDay();
+  const daysElapsed = Math.max(1, dayOfWeek-1+(now.getHours()/24));
+
+  CATS.forEach(cat=>{
+    const usedWeek = snap[cat.id];
+    const budgetWeek = cat.weekH*60;
+    const avgPerDay  = usedWeek/daysElapsed;
+    const pctDay     = Math.min(100,(avgPerDay/(cat.dailyH*60))*100);
+    const pctWeek    = Math.min(100,(usedWeek/budgetWeek)*100);
+    const over       = usedWeek>budgetWeek;
+    const low        = !over&&pctWeek>80;
+    const isActive   = state.activeId===cat.id;
+    const leftWeek   = budgetWeek-usedWeek;
+    const leftStr    = over?`⚠ +${fmtHM(usedWeek-budgetWeek)}`:fmtHM(leftWeek);
+    const leftCls    = over?'cc-left gone':low?'cc-left low':'cc-left';
+
+    const card=document.createElement('div');
+    card.className='cat-card'+(isActive?' active-card':'')+(over?' exhausted':'');
+    card.style.setProperty('--cc',cat.color);
+
+    const btnLabel = isActive ? '⏸ PAUSAR' : '▶ INICIAR';
+    const btnCls   = 'cc-btn'+(isActive?' active-btn':'');
+    const btnDisabled = state.activeId&&!isActive ? 'disabled' : '';
+    const streetWarning = state.streetMode ? 'disabled' : '';
+
+    card.innerHTML=`
+      <div class="cc-top">
+        <span class="cc-emoji">${cat.emoji}</span>
+        <span class="cc-name">${cat.name}</span>
+        <div class="cc-meta">
+          <div><strong>${cat.dailyH<1?cat.dailyH*60+'m':cat.dailyH+'h'}</strong>/día</div>
+          <div><strong>${cat.weekH}h</strong>/sem</div>
+        </div>
+      </div>
+      <div class="cc-bars">
+        <div class="cc-bar-wrap">
+          <div class="cc-bar-label">Prom. diario</div>
+          <div class="cc-track"><div class="cc-fill${over?' over':''}" style="width:${pctDay}%;background:${cat.color}"></div></div>
+        </div>
+        <div class="cc-bar-wrap">
+          <div class="cc-bar-label">Semana</div>
+          <div class="cc-track"><div class="cc-fill${over?' over':''}" style="width:${pctWeek}%;background:${cat.color}"></div></div>
+        </div>
+      </div>
+      <div class="cc-nums">
+        <span class="cc-used">${fmtHM(usedWeek)} usados</span>
+        <span class="${leftCls}">${leftStr}</span>
+      </div>
+      <button class="${btnCls}" onclick="startTimer('${cat.id}')" ${btnDisabled || streetWarning}>
+        ${btnLabel}
+      </button>`;
+    list.appendChild(card);
+  });
+
+  // ── WEEK VIEW ──
+  const ws=new Date(state.weekStart);
+  const we=new Date(ws); we.setDate(ws.getDate()+6);
+  const fmt=d=>`${d.getDate()}/${d.getMonth()+1}`;
+  document.getElementById('wp-week').textContent=`${fmt(ws)}–${fmt(we)}`;
+  document.getElementById('wp-used').textContent=(Object.values(snap).reduce((a,b)=>a+b,0)/60).toFixed(1)+'h';
+  document.getElementById('wp-buffer').textContent=Math.max(0,CATS.find(c=>c.id==='buffer').weekH-snap['buffer']/60).toFixed(1)+'h';
+
+  const wbars=document.getElementById('week-bars');
+  wbars.innerHTML='';
+  // Show street as informational row at top if ever used this week
+  if ((state.streetUsedMins||0) > 0 || state.streetMode) {
+    const streetH = streetLive/60;
+    const row=document.createElement('div');
+    row.className='wb-row';
+    row.innerHTML=`
+      <div class="wb-top">
+        <span class="wb-emoji">🚶</span>
+        <span class="wb-name" style="color:var(--street)">Calle / Traslados</span>
+        <span class="wb-pct" style="color:var(--dim)">esporádico</span>
+        <span class="wb-val" style="color:var(--street)">${streetH.toFixed(1)}h esta sem.</span>
+      </div>
+      <div class="wb-track"><div class="wb-fill" style="width:100%;background:rgba(255,204,0,.15)">
+        <div style="height:100%;width:${Math.min(100,streetH/2*100)}%;background:var(--street);border-radius:4px;transition:width .4s"></div>
+      </div></div>`;
+    wbars.appendChild(row);
+  }
+  CATS.forEach(cat=>{
+    const usedH=snap[cat.id]/60;
+    const pct=Math.min(100,(usedH/cat.weekH)*100);
+    const over=usedH>cat.weekH;
+    const row=document.createElement('div');
+    row.className='wb-row';
+    row.innerHTML=`
+      <div class="wb-top">
+        <span class="wb-emoji">${cat.emoji}</span>
+        <span class="wb-name">${cat.name}</span>
+        <span class="wb-pct">${pct.toFixed(0)}%</span>
+        <span class="wb-val" style="color:${over?'var(--red)':cat.color}">${usedH.toFixed(1)}/${cat.weekH}h</span>
+      </div>
+      <div class="wb-track"><div class="wb-fill${over?' over':''}" style="width:${pct}%;background:${cat.color}"></div></div>`;
+    wbars.appendChild(row);
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+if(!state.bufferStart&&!state.activeId&&!state.streetMode){state.bufferStart=Date.now();saveState();}
+
+// Restore UI after page reload
+if(state.streetMode && state.activeStart) {
+  updateStreetUI();
+  startBannerTick('street');
+} else if(state.activeId && state.activeStart){
+  const cat=CATS.find(c=>c.id===state.activeId);
+  if(cat){
+    const banner=document.getElementById('session-banner');
+    document.getElementById('sb-name').textContent=`${cat.emoji} ${cat.name}`;
+    banner.classList.add('visible');
+    startBannerTick(state.activeId);
+  }
+}
+if(state.streetMode) updateStreetUI();
+
+updateClock();
+renderLive();
+setInterval(onTick,1000);
+</script>
+</body>
+</html>
