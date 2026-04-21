@@ -103,17 +103,19 @@ body{padding:0 0 120px;background-image:repeating-linear-gradient(0deg,transpare
 .cc-big{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;}
 .cc-used-big{font-family:'Cinzel',serif;font-weight:900;font-size:2rem;font-variant-numeric:tabular-nums;line-height:1;color:var(--cc,var(--gold));}
 .cc-used-big.over{color:var(--red);}
-.cc-budget-info{text-align:right;font-family:'Cinzel',serif;font-size:.6rem;color:var(--dim);line-height:1.7;}
-.cc-budget-info strong{color:var(--text);font-size:.75rem;}
+.cc-budget-info{text-align:right;font-family:'Cinzel',serif;line-height:1.8;}
+.cc-budget-info .cc-week-val{font-size:1.1rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.cc-budget-info .cc-week-label{font-size:.6rem;color:var(--dim);}
+.cc-budget-info .cc-daily-val{font-size:.85rem;font-weight:700;color:var(--gold2);}
 
-.cc-track-wrap{margin-bottom:8px;}
-.cc-track-label{font-family:'Cinzel',serif;font-size:.46rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.cc-track-wrap{margin-bottom:10px;}
+.cc-track-label{font-family:'Cinzel',serif;font-size:.48rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
 .cc-track{background:var(--dim2);border-radius:2px;height:5px;overflow:hidden;border:1px solid var(--border);}
 .cc-fill{height:100%;border-radius:2px;transition:width .4s;}
 .cc-fill.over{background:var(--red)!important;}
 
 .cc-footer{display:flex;align-items:center;gap:8px;margin-top:2px;}
-.cc-left-label{font-family:'Crimson Text',serif;font-style:italic;font-size:.7rem;flex:1;}
+.cc-left-label{font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;flex:1;font-variant-numeric:tabular-nums;}
 .cc-left-label.low{color:#c8841a;}
 .cc-left-label.gone{color:#c84a1a;}
 .cc-loan-tag{font-size:.5rem;color:#c8501a;font-family:'Cinzel',serif;letter-spacing:1px;}
@@ -123,19 +125,29 @@ body{padding:0 0 120px;background-image:repeating-linear-gradient(0deg,transpare
 .cc-btn.active-btn{background:rgba(201,168,76,.08);color:var(--gold2);}
 .cc-btn:disabled{opacity:.2;cursor:not-allowed;}
 
-/* EDIT MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
-.modal-overlay.visible{display:flex;}
-.modal{background:var(--s1);border:2px solid var(--gold);border-radius:var(--r);padding:24px;width:100%;max-width:340px;}
-.modal-title{font-family:'Cinzel',serif;font-size:.8rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;}
-.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.modal-label{font-family:'Cinzel',serif;font-size:.58rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
-.modal-input{background:var(--dim2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;color:var(--text);font-family:'Cinzel',serif;font-size:1rem;width:100%;text-align:center;}
-.modal-input:focus{outline:1px solid var(--gold);}
-.modal-hint{font-family:'Crimson Text',serif;font-style:italic;font-size:.68rem;color:var(--dim);margin-bottom:16px;line-height:1.5;}
-.modal-actions{display:flex;gap:8px;}
-.modal-save{flex:1;padding:11px;background:var(--gold);color:#000;border:none;border-radius:var(--r);font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;}
-.modal-cancel{padding:11px 16px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:var(--r);font-family:'Cinzel',serif;font-size:.65rem;cursor:pointer;}
+/* GLOBAL EDIT PANEL */
+.edit-fab{position:fixed;bottom:20px;right:16px;z-index:200;background:linear-gradient(135deg,#1a0a2e,#0d0518);color:#a070f0;border:2px solid #7c6af1;border-radius:2px;padding:12px 16px;font-family:'Cinzel',serif;font-weight:700;font-size:.7rem;letter-spacing:2px;cursor:pointer;box-shadow:0 4px 16px rgba(124,106,241,.25);transition:all .2s;text-transform:uppercase;}
+.edit-fab:active{transform:scale(.96);}
+
+.edit-panel{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:400;display:none;flex-direction:column;overflow:hidden;}
+.edit-panel.visible{display:flex;}
+.edit-panel-header{background:var(--s1);border-bottom:2px solid var(--gold);padding:16px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.edit-panel-title{font-family:'Cinzel',serif;font-size:.85rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;flex:1;}
+.edit-panel-note{font-family:'Crimson Text',serif;font-style:italic;font-size:.68rem;color:var(--dim);margin-top:2px;}
+.edit-panel-body{flex:1;overflow-y:auto;padding:14px;}
+.edit-row{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;background-image:linear-gradient(135deg,var(--s1),var(--parchment));}
+.edit-row-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.edit-row-emoji{font-size:1.2rem;}
+.edit-row-name{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;color:var(--gold2);flex:1;}
+.edit-row-current{font-family:'Cinzel',serif;font-size:.7rem;color:var(--dim);}
+.edit-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.edit-field{display:flex;flex-direction:column;gap:5px;}
+.edit-label{font-family:'Cinzel',serif;font-size:.5rem;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;}
+.edit-input{background:var(--dim2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;color:var(--text);font-family:'Cinzel',serif;font-size:1.1rem;font-weight:700;width:100%;text-align:center;font-variant-numeric:tabular-nums;}
+.edit-input:focus{outline:2px solid var(--gold);border-color:var(--gold);}
+.edit-panel-footer{background:var(--s1);border-top:2px solid var(--border);padding:14px 18px;display:grid;grid-template-columns:1fr 2fr;gap:10px;flex-shrink:0;}
+.edit-cancel{padding:13px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:var(--r);font-family:'Cinzel',serif;font-size:.65rem;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
+.edit-save{padding:13px;background:linear-gradient(135deg,var(--gold),#a07830);color:#000;border:none;border-radius:var(--r);font-family:'Cinzel',serif;font-size:.72rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:2px;}
 
 /* WEEK VIEW */
 .week-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
@@ -286,25 +298,18 @@ body{padding:0 0 120px;background-image:repeating-linear-gradient(0deg,transpare
   <div id="history-content"></div>
 </div>
 
-<!-- EDIT MODAL -->
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
-    <div class="modal-title" id="modal-title">Editar Bolsa</div>
-    <div class="modal-row">
-      <div>
-        <div class="modal-label">Horas diarias</div>
-        <input class="modal-input" id="modal-daily-h" type="number" min="0" max="23" placeholder="h"/>
-      </div>
-      <div>
-        <div class="modal-label">Minutos diarios</div>
-        <input class="modal-input" id="modal-daily-m" type="number" min="0" max="59" placeholder="m"/>
-      </div>
+<!-- GLOBAL EDIT PANEL -->
+<div class="edit-panel" id="edit-panel">
+  <div class="edit-panel-header">
+    <div>
+      <div class="edit-panel-title">⚔ Editar Bolsones</div>
+      <div class="edit-panel-note">El reloj y el Fin del Reino siguen corriendo. Ajustá los valores y guardá.</div>
     </div>
-    <div class="modal-hint" id="modal-hint">El presupuesto semanal se recalcula automáticamente × 7 días.</div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="modal-save" onclick="saveModal()">⚔ Guardar</button>
-    </div>
+  </div>
+  <div class="edit-panel-body" id="edit-panel-body"></div>
+  <div class="edit-panel-footer">
+    <button class="edit-cancel" onclick="closeEditPanel()">✕ Cancelar</button>
+    <button class="edit-save" onclick="saveEditPanel()">⚔ Guardar Cambios</button>
   </div>
 </div>
 
@@ -312,6 +317,7 @@ body{padding:0 0 120px;background-image:repeating-linear-gradient(0deg,transpare
   <span id="street-fab-icon">🗺️</span>
   <span id="street-fab-label">Salir a Campaña</span>
 </button>
+<button class="edit-fab" onclick="openEditPanel()">✏ Editar</button>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -393,7 +399,6 @@ let CATS=buildCats();
 
 let timerInt=null;
 let currentTab='today';
-let editingCatId=null;
 
 // ══════ CORE SNAP ═════════════════════════════════
 // Buffer ONLY drains when activeId is null AND not street mode
@@ -496,35 +501,66 @@ function updateStreetUI(){
   }
 }
 
-// ══════ EDIT MODAL ════════════════════════════════
-function openEdit(id){
-  editingCatId=id;
-  const cat=CATS.find(c=>c.id===id);
-  const dm=state.dailyMins[id]||0;
-  const h=Math.floor(dm/60);const m=dm%60;
-  document.getElementById('modal-title').textContent=`Editar: ${cat.name}`;
-  document.getElementById('modal-daily-h').value=h;
-  document.getElementById('modal-daily-m').value=m;
-  document.getElementById('modal-hint').textContent=`Actualmente: ${h>0?h+'h ':''} ${m>0?m+'min':''} diarios = ${cat.weekH}h semanales.`;
-  document.getElementById('modal-overlay').classList.add('visible');
+// ══════ GLOBAL EDIT PANEL ════════════════════════
+function openEditPanel(){
+  const snap=getSnap();
+  const body=document.getElementById('edit-panel-body');
+  body.innerHTML='';
+  CATS.forEach(cat=>{
+    const usedMins=snap[cat.id]||0;
+    const usedH=Math.floor(usedMins/60);
+    const usedM=Math.round(usedMins%60);
+    const row=document.createElement('div');
+    row.className='edit-row';
+    row.innerHTML=`
+      <div class="edit-row-top">
+        <span class="edit-row-emoji">${cat.emoji}</span>
+        <span class="edit-row-name">${cat.name}</span>
+        <span class="edit-row-current">Presupuesto: ${cat.weekH}h/sem</span>
+      </div>
+      <div class="edit-inputs">
+        <div class="edit-field">
+          <div class="edit-label">Horas usadas</div>
+          <input class="edit-input" id="edit-h-${cat.id}" type="number" min="0" max="999" value="${usedH}" inputmode="numeric"/>
+        </div>
+        <div class="edit-field">
+          <div class="edit-label">Minutos usados</div>
+          <input class="edit-input" id="edit-m-${cat.id}" type="number" min="0" max="59" value="${usedM}" inputmode="numeric"/>
+        </div>
+      </div>`;
+    body.appendChild(row);
+  });
+  document.getElementById('edit-panel').classList.add('visible');
 }
-function closeModal(){
-  document.getElementById('modal-overlay').classList.remove('visible');
-  editingCatId=null;
+
+function closeEditPanel(){
+  document.getElementById('edit-panel').classList.remove('visible');
 }
-function saveModal(){
-  if(!editingCatId)return;
-  const h=parseInt(document.getElementById('modal-daily-h').value)||0;
-  const m=parseInt(document.getElementById('modal-daily-m').value)||0;
-  const newMins=h*60+m;
-  if(newMins<1){showToast('⚠ Mínimo 1 minuto');return;}
-  state.dailyMins[editingCatId]=newMins;
-  // Recalculate all cats
-  CATS=buildCats();
+
+function saveEditPanel(){
+  // Flush any live time first so we don't double-count
+  if(state.activeId&&state.activeId!=='street'&&state.activeStart){
+    state.used[state.activeId]=(state.used[state.activeId]||0)+(Date.now()-state.activeStart)/1000/60;
+    state.activeStart=Date.now(); // reset so live time starts from now
+  }else if(state.activeId==='street'&&state.activeStart){
+    const el=(Date.now()-state.activeStart)/1000/60;
+    state.used['buffer']=(state.used['buffer']||0)+el;
+    state.streetUsedMins=(state.streetUsedMins||0)+el;
+    state.activeStart=Date.now();
+  }else if(!state.activeId&&state.bufferStart){
+    state.used['buffer']=(state.used['buffer']||0)+(Date.now()-state.bufferStart)/1000/60;
+    state.bufferStart=Date.now();
+  }
+  // Apply edited values
+  CATS.forEach(cat=>{
+    const h=parseInt(document.getElementById(`edit-h-${cat.id}`).value)||0;
+    const m=parseInt(document.getElementById(`edit-m-${cat.id}`).value)||0;
+    state.used[cat.id]=h*60+m;
+  });
   saveState();
-  closeModal();
+  closeEditPanel();
   renderLive();
-  showToast(`⚔ ${CATS.find(c=>c.id===editingCatId).name} actualizado`);
+  showToast('⚔ Cambios guardados y sincronizados');
 }
 
 // ══════ WEEK ROLLOVER ═════════════════════════════
@@ -687,13 +723,12 @@ function renderLive(){
       <div class="cc-top">
         <span class="cc-emoji">${cat.emoji}</span>
         <span class="cc-name">${cat.name}</span>
-        <button class="cc-edit-btn" onclick="openEdit('${cat.id}')">✏ Editar</button>
       </div>
       <div class="cc-big">
         <div class="cc-used-big${over?' over':''}">${fmtHM(used)}</div>
         <div class="cc-budget-info">
-          <div><strong>${cat.weekH}h</strong> / semana</div>
-          <div>${dailyStr}</div>
+          <div><span class="cc-week-val">${cat.weekH}h</span><span class="cc-week-label"> / semana</span></div>
+          <div class="cc-daily-val">${dailyStr}</div>
         </div>
       </div>
       <div class="cc-track-wrap">
